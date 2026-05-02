@@ -1,3 +1,4 @@
+using System.Globalization;
 using FluentAssertions;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
@@ -10,6 +11,8 @@ namespace DatesAndStuff.Web.Tests;
 public class BlazeDemoPageTests
 {
     private IWebDriver driver;
+    private const decimal ScreenshotPriceThreshold = 300m;
+    private static readonly string ScreenshotOutputFolder = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
 
     [SetUp]
     public void SetupTest()
@@ -48,5 +51,26 @@ public class BlazeDemoPageTests
         var flightRows = driver.FindElements(By.XPath("//table//tr[td]"));
 
         flightRows.Count.Should().BeGreaterThanOrEqualTo(3);
+
+        var hasCheapFlight = flightRows.Any(row =>
+        {
+            var columns = row.FindElements(By.TagName("td"));
+            if (columns.Count < 6)
+                return false;
+
+            var priceText = columns[5].Text.Replace("$", string.Empty).Trim();
+            return decimal.TryParse(priceText, NumberStyles.Any, CultureInfo.InvariantCulture, out var price)
+                   && price < ScreenshotPriceThreshold;
+        });
+
+        if (hasCheapFlight)
+        {
+            var screenshotPath = Path.Combine(
+                ScreenshotOutputFolder,
+                $"blazedemo-mexico-dublin.png");
+
+            var screenshot = ((ITakesScreenshot)driver).GetScreenshot();
+            screenshot.SaveAsFile(screenshotPath);
+        }
     }
 }
