@@ -97,8 +97,6 @@ public class PersonPageTests
         Assert.That(verificationErrors.ToString(), Is.EqualTo(""));
     }
 
-    [TestCase("-10.01", 5000)]
-    [TestCase("-10", 5000)]
     [TestCase("-9.99", 4500.5)]
     [TestCase("0", 5000)]
     [TestCase("5", 5250)]
@@ -127,8 +125,9 @@ public class PersonPageTests
         salaryAfterSubmission.Should().BeApproximately(expectedSalary, 0.001);
     }
 
-    [Test]
-    public void Person_SalaryIncrease_LessThanMinusTen_ShouldShowValidationMessagesInSummaryAndUnder()
+    [TestCase("-10.01")]
+    [TestCase("-10")]
+    public void Person_SalaryIncrease_InvalidBoundary_ShouldShowValidationMessagesAndKeepSalary(string percentageInput)
     {
         // Arrange
         driver.Navigate().GoToUrl(BaseURL);
@@ -138,18 +137,20 @@ public class PersonPageTests
 
         var input = wait.Until(ExpectedConditions.ElementExists(By.XPath("//*[@data-test='SalaryIncreasePercentageInput']")));
         input.Clear();
-        input.SendKeys("-10.01");
+        input.SendKeys(percentageInput);
 
         // Act
         var submitButton = wait.Until(ExpectedConditions.ElementExists(By.XPath("//*[@data-test='SalaryIncreaseSubmitButton']")));
         submitButton.Click();
 
         // Assert
-        var summaryError = wait.Until(ExpectedConditions.ElementIsVisible(By.XPath("//ul[contains(@class,'validation-errors')]//li[contains(.,'between -10 and infinity')]")));
-        var fieldError = wait.Until(ExpectedConditions.ElementIsVisible(By.XPath("//*[contains(@class,'validation-message') and contains(.,'between -10 and infinity')]")));
+        var summaryError = wait.Until(ExpectedConditions.ElementIsVisible(By.XPath("//ul[contains(@class,'validation-errors')]//li[contains(.,'greater than -10')]")));
+        var fieldError = wait.Until(ExpectedConditions.ElementIsVisible(By.XPath("//*[contains(@class,'validation-message') and contains(.,'greater than -10')]")));
+        var salaryLabel = wait.Until(ExpectedConditions.ElementExists(By.XPath("//*[@data-test='DisplayedSalary']")));
 
         summaryError.Displayed.Should().BeTrue();
         fieldError.Displayed.Should().BeTrue();
+        double.Parse(salaryLabel.Text).Should().BeApproximately(5000, 0.001);
     }
 
     private bool IsElementPresent(By by)
